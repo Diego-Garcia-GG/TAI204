@@ -2,6 +2,7 @@
 from fastapi import FastAPI, status, HTTPException
 import asyncio
 from typing import Optional # Para parámetros opcionales
+from pydantic import BaseModel, Field
 
 # Instancia del servidor
 app = FastAPI(
@@ -15,6 +16,12 @@ usuarios = [
     {"id":2, "nombre":"Coral", "edad":19},
     {"id":3, "nombre":"Ricardo", "edad":21}
 ]
+
+# Modelo Pydantic de validación
+class crear_Usuario(BaseModel):
+    id: int = Field(..., gt = 0, description = "Identificador de Usuario")
+    nombre: str = Field(..., min_length = 3, max_length = 50, example = "John Doe")
+    edad: int = Field(..., ge = 1, le = 125, description = "Edad válida entre 1 y 125")
 
 # Endpoints
 @app.get("/", tags = ["Inicio"])
@@ -64,9 +71,9 @@ async def consultaT():
 
 # Método POST
 @app.post("/v1/usuarios", tags=["CRUD HTTP"])
-async def agregar_usuario(usuario:dict): # dict = Cuando un parámetro es obligatorio, debe ser de tipo "int", cuando se declara como dict, se traspasa al formato JSON.
+async def agregar_usuario(usuario:crear_Usuario): # dict = Cuando un parámetro es obligatorio, debe ser de tipo "int", cuando se declara como dict, se traspasa al formato JSON.
     for usr in usuarios:
-        if(usr["id"] == usuario.get("id")):
+        if(usr["id"] == usuario.id):
             raise HTTPException(status_code=400, detail="El id ya existe !")
     usuarios.append(usuario)
     return{
@@ -77,9 +84,9 @@ async def agregar_usuario(usuario:dict): # dict = Cuando un parámetro es obliga
 
 # Método PUT
 @app.put("/v1/usuarios", tags=["CRUD HTTP"])
-async def actualizar_usuario(usuario:dict):
+async def actualizar_usuario(usuario:crear_Usuario):
     for usr in usuarios:
-        if(usr["id"] == usuario.get("id")):
+        if(usr["id"] == usuario.id):
             usr.update(usuario)
             return{
                 "mensaje":"usuario actualizado correctamente !",
