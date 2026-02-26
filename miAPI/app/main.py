@@ -17,9 +17,13 @@ usuarios = [
     {"id":3, "nombre":"Ricardo", "edad":21}
 ]
 
-# Modelo Pydantic de validación
+# Modelos Pydantic de validación
 class crear_Usuario(BaseModel):
     id: int = Field(..., gt = 0, description = "Identificador de Usuario")
+    nombre: str = Field(..., min_length = 3, max_length = 50, example = "John Doe")
+    edad: int = Field(..., ge = 1, le = 125, description = "Edad válida entre 1 y 125")
+
+class actualizar_usuario(BaseModel):
     nombre: str = Field(..., min_length = 3, max_length = 50, example = "John Doe")
     edad: int = Field(..., ge = 1, le = 125, description = "Edad válida entre 1 y 125")
 
@@ -83,23 +87,24 @@ async def agregar_usuario(usuario:crear_Usuario): # dict = Cuando un parámetro 
     }
 
 # Método PUT
-@app.put("/v1/usuarios", tags=["CRUD HTTP"])
-async def actualizar_usuario(usuario:crear_Usuario):
+@app.put("/v1/usuarios/{id}", tags=["CRUD HTTP"])
+async def actualizar_usuario(id:int, usuario:actualizar_usuario):
     for usr in usuarios:
-        if(usr["id"] == usuario.id):
-            usr.update(usuario)
+        if usr["id"] == id:
+            usr["nombre"] = usuario.nombre
+            usr["edad"] = usuario.edad
             return{
                 "mensaje":"usuario actualizado correctamente !",
-                "Usuario":usuario,
+                "Usuario":usr,
                 "status":"200"
             }
     raise HTTPException(status_code=400, detail="el id no existe !")
 
 # Método DELETE
-@app.delete("/v1/usuarios", tags=["CRUD HTTP"])
-async def eliminar_usuario(usuario:dict):
+@app.delete("/v1/usuarios/{id}", tags=["CRUD HTTP"])
+async def eliminar_usuario(id:int):
     for usr in usuarios:
-        if(usr["id"] == usuario.get("id")):
+        if(usr["id"] == usuario.id):
             usuarios.remove(usr)
             return{
                 "mensaje":"usuario eliminado correctamente !",
