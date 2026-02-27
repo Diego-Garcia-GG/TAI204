@@ -104,7 +104,7 @@ async def actualizar_usuario(id:int, usuario:actualizar_usuario):
 @app.delete("/v1/usuarios/{id}", tags=["CRUD HTTP"])
 async def eliminar_usuario(id:int):
     for usr in usuarios:
-        if(usr["id"] == usuario.id):
+        if(usr["id"] == usuarios.get("id")):
             usuarios.remove(usr)
             return{
                 "mensaje":"usuario eliminado correctamente !",
