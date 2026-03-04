@@ -1,8 +1,10 @@
 # importaciones
-from fastapi import FastAPI, status, HTTPException
+from fastapi import FastAPI, status, HTTPException, Depends # Depends (Condicional para entrar al endpoint) para protección de endpoints
 import asyncio
 from typing import Optional # Para parámetros opcionales
 from pydantic import BaseModel, Field
+from fastapi.security import HTTPBasic, HTTPBasicCredentials # HTTPBasic, HTTPBasicCredentialss (Credenciales) Para protección de endpoints
+import secrets # Secrets (Manipulación de contraseñas) para protección de endpoints
 
 # Instancia del servidor
 app = FastAPI(
@@ -26,6 +28,20 @@ class crear_Usuario(BaseModel):
 class actualizar_usuario(BaseModel):
     nombre: str = Field(..., min_length = 3, max_length = 50, example = "John Doe")
     edad: int = Field(..., ge = 1, le = 125, description = "Edad válida entre 1 y 125")
+
+# Seguridad con HTTP Basic
+security = HTTPBasic()
+
+def verificar_peticion(credenciales:HTTPBasicCredentials=Depends(security)):
+    usuarioAut = secrets.compare_digest(credenciales.username,"diegogarcia")
+    contraAut = secrets.compare_digest(credenciales.password, "123456")
+
+    if not (usuarioAut and contraAut):
+        raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED, 
+        detail="Credenciales no autorizadas"
+        )
+    return credenciales.username
 
 # Endpoints
 @app.get("/", tags = ["Inicio"])
@@ -101,17 +117,17 @@ async def actualizar_usuario(id:int, usuario:actualizar_usuario):
     raise HTTPException(status_code=400, detail="el id no existe !")
 
 # Método DELETE
-@app.delete("/v1/usuarios/{id}", tags=["CRUD HTTP"])
-async def eliminar_usuario(id:int):
+@app.delete("/v1/usuarios/{id}", tags=["CRUD HTTP"], status_code=status.HTTP_200_OK)
+async def eliminar_usuario(id:int, usuarioAut:str=Depends(verificar_peticion)):
     for usr in usuarios:
-        if(usr["id"] == usuarios.get("id")):
+        if(usr["id"] == id):
             usuarios.remove(usr)
             return{
-                "mensaje":"usuario eliminado correctamente !",
-                "Usuario":usuario,
-                "status":"200"
+                "mensaje": f"Usuario eliminado correctamente por {usuarioAut}",
+                "usuario": usr,
+                "status": 200
             }
-    raise HTTPException(status_code=400, detail="el id no existe !")
 
+    raise HTTPException(status_code=400, detail="El id no existe!")
 
 # Para encender el servidor de FastAPI, se utiliza el comando "uvicorn [Nombre del archivo main]:[Nombre del objeto instanciado con FastAPI] --reload"
