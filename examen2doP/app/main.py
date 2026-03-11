@@ -47,10 +47,10 @@ def verificar_peticion(credenciales:HTTPBasicCredentials=Depends(security)):
 @app.post("/v1/turnos", tags=["TURNOS"])
 async def crear_turno(turno:crear_turno):
     for tur in turnos:
-        if(tur("id") == turno.id):
+        if(tur["id"] == turno.id):
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Ya existe un turno con ese id !")
         
-        if(tur("id_cliente") == turno.id_cliente >= 5):
+        if(tur["id_cliente"] == turno.id_cliente >= 5):
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="El mismo cliente no puede tener 5 consultas en el mismo día !")
         
         if(turno.fecha > time(9,0) and turno.fecha < time(15,0)):
