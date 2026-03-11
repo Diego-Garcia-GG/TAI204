@@ -7,9 +7,7 @@ import secrets
 from datetime import date, time, datetime
 
 app = FastAPI(
-    title = "Examen 2doP",
-    description = "García García Diego Antonio",
-    version = "1.0"
+    title="Examen 2doP"
 )
 
 clientes = [
@@ -33,6 +31,19 @@ class crear_turno(BaseModel):
 class marcar_atendido(BaseModel):
     estatus:Literal["Pendiente", "Atendido"] = Field(..., example="Estatus del turno", description="estatus del turno")
 
+security = HTTPBasic()
+
+def verificar_peticion(credenciales:HTTPBasicCredentials=Depends(security)):
+    usuarioAuth = secrets.compare_digest(credenciales.username,"banco")
+    contraAuth = secrets.compare_digest(credenciales.password,"2468")
+
+    if not (usuarioAuth and contraAuth):
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciales No Autorizadas"
+        )
+    return credenciales.username
+
 @app.post("/v1/turnos", tags=["TURNOS"])
 async def crear_turno(turno:crear_turno):
     for tur in turnos:
@@ -41,10 +52,13 @@ async def crear_turno(turno:crear_turno):
         
         if(tur("id_cliente") == turno.id_cliente >= 5):
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="El mismo cliente no puede tener 5 consultas en el mismo día !")
-    turnos.append(turno)
+        
+        if(turno.fecha > time(9,0) and turno.fecha < time(15,0)):
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="No se pueden crear turnos antes de las 09:00 a.m y 3:00 p.m")
+    turnos.append(turno.model_dump())
     return{
         "status":"200 OK",
-        "mensaje":"El turno "
+        "mensaje":"El turno ha sido creado exitosamente !"
     }
 
 @app.get("/v1/turnos", tags=["TURNOS"])
@@ -65,7 +79,7 @@ async def consultar_turno(id:int):
             }
 
 @app.put("/v1/turnos/{id}", tags=["TURNOS"])
-async def marcar_turno_atendido(id:int, marcar:marcar_atendido):
+async def marcar_turno_atendido(id:int, marcar:marcar_atendido, usuarioAuth:str=Depends(verificar_peticion)):
     for tur in turnos:
         if(tur["id"] == id):
             if(tur["estatus"] == "Atendido"):
@@ -81,7 +95,7 @@ async def marcar_turno_atendido(id:int, marcar:marcar_atendido):
     raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="No existe ningun turno con ese id !")
 
 @app.delete("/v1/turnos/{id}", tags=["TURNOS"])
-async def eliminar_turno(id:int):
+async def eliminar_turno(id:int, usuarioAuth:str=Depends(verificar_peticion)):
     for tur in turnos:
         if(tur["id"] == id):
             turnos.remove(tur)
