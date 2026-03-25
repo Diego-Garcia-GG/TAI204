@@ -3,28 +3,34 @@ from app.data.database import usuarios
 from app.models.usuarios import crear_Usuario, actualizar_usuario
 from app.security.auth import verificar_peticion
 
+from sqlalchemy.orm import Session
+from app.data.db import get_db
+from app.data.usuario import Usuario as usuarioDB
+
 router=APIRouter(
     prefix="/v1/usuarios", tags=["CRUD HTTP"]
 )
 
 @router.get("/")
-async def consultaT():
+async def consultaT(db:Session= Depends(get_db)):
+    queryUsuario= db.query(usuarioDB).all()
     return{
         "status":"200",
-        "total":len(usuarios), # len = lenght
-        "Usuarios":usuarios # usuarios = tabla de usuarios DB ficticia
+        "total":len(queryUsuario), # len = lenght
+        "Usuarios":queryUsuario # usuarios = tabla de usuarios DB ficticia
     }
 
 # Método POST
 @router.post("/")
-async def agregar_usuario(usuario:crear_Usuario): # dict = Cuando un parámetro es obligatorio, debe ser de tipo "int", cuando se declara como dict, se traspasa al formato JSON.
-    for usr in usuarios:
-        if(usr["id"] == usuario.id):
-            raise HTTPException(status_code=400, detail="El id ya existe !")
-    usuarios.append(usuario)
+async def agregar_usuario(usuarioP:crear_Usuario, db:Session= Depends(get_db)): # dict = Cuando un parámetro es obligatorio, debe ser de tipo "int", cuando se declara como dict, se traspasa al formato JSON.
+    usuarioNuevo= usuarioDB(nombre= usuarioP.nombre, edad=usuarioP.edad)
+    db.add(usuarioNuevo)
+    db.commit()
+    db.refresh(usuarioNuevo)
+
     return{
         "mensaje":"usuario agregado correctamente !",
-        "Usuario":usuario,
+        "Usuario":usuarioP,
         "status":"200"
     }
 
